@@ -1,5 +1,6 @@
 mod double_pendulum;
 
+use double_pendulum::State;
 use macroquad::prelude::*;
 
 const SCREEN_WIDTH: f32 = 800.0;
@@ -7,7 +8,7 @@ const SCREEN_HEIGHT: f32 = 600.0;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Test".to_string(),
+        window_title: "Double Pendulum Simulation".to_string(),
         window_width: SCREEN_WIDTH as i32,
         window_height: SCREEN_HEIGHT as i32,
         high_dpi: true,
@@ -68,11 +69,12 @@ async fn main() {
     let m1: f64 = 1.0;
     let m2: f64 = 1.0;
 
-    let mut theta1: f64 = 1.0;
-    let mut theta2: f64 = 0.5;
-
-    let mut omega1: f64 = 4.0;
-    let mut omega2: f64 = -2.0;
+    let mut state = State {
+        theta1: 1.0,
+        omega1: 4.0,
+        theta2: 0.5,
+        omega2: -2.0,
+    };
 
     let bg_color = Color::from_rgba(18, 20, 28, 255);
     let rod_color = Color::from_rgba(75, 155, 255, 255);
@@ -83,28 +85,23 @@ async fn main() {
             break;
         }
 
-        let dt = get_frame_time() as f64;
+        // Sub-step fixed physics per frame to avoid RK4 explosion during frame drops
+        let dt = (get_frame_time() as f64).min(0.05);
+        let substeps = 10;
+        let sub_dt = dt / substeps as f64;
 
-        double_pendulum::step(
-            l1,
-            m1,
-            &mut theta1,
-            &mut omega1,
-            l2,
-            m2,
-            &mut theta2,
-            &mut omega2,
-            dt,
-        );
+        for _ in 0..substeps {
+            double_pendulum::rk4_step(l1, m1, l2, m2, &mut state, sub_dt);
+        }
 
         let x0 = (SCREEN_WIDTH / 2.0) as f64;
         let y0 = 100.0;
 
-        let x1 = x0 + l1 * theta1.sin() * 100.0;
-        let y1 = y0 + l1 * theta1.cos() * 100.0;
+        let x1 = x0 + l1 * state.theta1.sin() * 100.0;
+        let y1 = y0 + l1 * state.theta1.cos() * 100.0;
 
-        let x2 = x1 + l2 * theta2.sin() * 100.0;
-        let y2 = y1 + l2 * theta2.cos() * 100.0;
+        let x2 = x1 + l2 * state.theta2.sin() * 100.0;
+        let y2 = y1 + l2 * state.theta2.cos() * 100.0;
 
         clear_background(bg_color);
         draw_cartesian_plane();
