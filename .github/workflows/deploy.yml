@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
@@ -34,9 +34,6 @@ jobs:
 
       - name: Bundle Web Assets
         run: |
-          if [ ! -f dist/mq_js_bundle.js ]; then
-            curl -sSL https://raw.githubusercontent.com/not-fl3/macroquad/master/miniquad-js/mq_js_bundle.js -o dist/mq_js_bundle.js
-          fi
           cp target/wasm32-unknown-unknown/release/*.wasm dist/
 
       - name: Upload artifact for GitHub Pages
