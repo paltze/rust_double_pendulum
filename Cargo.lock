@@ -182,13 +182,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mandelbrot_sdl"
-version = "0.1.0"
-dependencies = [
- "macroquad",
-]
-
-[[package]]
 name = "miniquad"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -262,6 +255,13 @@ name = "quad-rand"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a651516ddc9168ebd67b24afd085a718be02f8858fe406591b013d101ce2f40"
+
+[[package]]
+name = "rust_double_pendulum"
+version = "0.1.0"
+dependencies = [
+ "macroquad",
+]
 
 [[package]]
 name = "simd-adler32"
