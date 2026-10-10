@@ -1,88 +1,66 @@
 mod double_pendulum;
 
-extern crate sdl2;
+use macroquad::prelude::*;
 
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
+const SCREEN_WIDTH: f32 = 800.0;
+const SCREEN_HEIGHT: f32 = 600.0;
 
-use std::time::Instant;
-
-const SCREEN_WIDTH: u32 = 800;
-const SCREEN_HEIGHT: u32 = 600;
-
-fn draw_circle(
-    canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
-    cx: i32,
-    cy: i32,
-    radius: i32,
-) -> Result<(), String> {
-    let mut x = radius;
-    let mut y = 0;
-    let mut error = 1 - radius;
-
-    canvas.set_draw_color(Color::RGB(240, 180, 60));
-
-    while x >= y {
-        canvas.draw_line((cx - x, cy + y), (cx + x, cy + y))?;
-        canvas.draw_line((cx - x, cy - y), (cx + x, cy - y))?;
-        canvas.draw_line((cx - y, cy + x), (cx + y, cy + x))?;
-        canvas.draw_line((cx - y, cy - x), (cx + y, cy - x))?;
-
-        y += 1;
-
-        if error < 0 {
-            error += 2 * y + 1;
-        } else {
-            x -= 1;
-            error += 2 * (y - x) + 1;
-        }
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Test".to_string(),
+        window_width: SCREEN_WIDTH as i32,
+        window_height: SCREEN_HEIGHT as i32,
+        high_dpi: true,
+        window_resizable: true,
+        ..Default::default()
     }
-
-    Ok(())
 }
 
-fn main() -> Result<(), String> {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+fn draw_cartesian_plane() {
+    let grid_color = Color::from_rgba(45, 49, 62, 255);
+    let axis_color = Color::from_rgba(105, 115, 140, 255);
 
-    let mut window = video_subsystem
-        .window("Test", SCREEN_WIDTH, SCREEN_HEIGHT)
-        .position_centered()
-        .allow_highdpi()
-        .build()
-        .map_err(|e| e.to_string())?;
+    let spacing = 40.0;
+    let cx = SCREEN_WIDTH / 2.0;
+    let cy = SCREEN_HEIGHT / 2.0;
 
-    #[cfg(not(target_os = "macos"))]
-    {
-        let idx = window.display_index()?;
-        let (_ddpi, hdpi, _vdpi) = video_subsystem.display_dpi(idx)?;
-        let k = hdpi / 96.0;
-        window
-            .set_size(
-                ((SCREEN_WIDTH as f32) * k) as u32,
-                ((SCREEN_HEIGHT as f32) * k) as u32,
-            )
-            .map_err(|e| e.to_string())?;
-        window.set_position(
-            sdl2::video::WindowPos::Centered,
-            sdl2::video::WindowPos::Centered,
-        );
+    let mut x = cx;
+    while x <= SCREEN_WIDTH {
+        draw_line(x, 0.0, x, SCREEN_HEIGHT, 1.0, grid_color);
+        x += spacing;
     }
 
-    let mut canvas = window
-        .into_canvas()
-        .accelerated()
-        .present_vsync()
-        .build()
-        .map_err(|e| e.to_string())?;
+    x = cx - spacing;
+    while x >= 0.0 {
+        draw_line(x, 0.0, x, SCREEN_HEIGHT, 1.0, grid_color);
+        x -= spacing;
+    }
 
-    canvas
-        .set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT)
-        .map_err(|e| e.to_string())?;
+    let mut y = cy;
+    while y <= SCREEN_HEIGHT {
+        draw_line(0.0, y, SCREEN_WIDTH, y, 1.0, grid_color);
+        y += spacing;
+    }
 
-    let mut events = sdl_context.event_pump()?;
-    let mut last_frame = Instant::now();
+    y = cy - spacing;
+    while y >= 0.0 {
+        draw_line(0.0, y, SCREEN_WIDTH, y, 1.0, grid_color);
+        y -= spacing;
+    }
+
+    draw_line(cx, 0.0, cx, SCREEN_HEIGHT, 2.0, axis_color);
+    draw_line(0.0, cy, SCREEN_WIDTH, cy, 2.0, axis_color);
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    let scale = miniquad::window::dpi_scale();
+
+    if (scale - 1.0).abs() > f32::EPSILON {
+        let scaled_w = (SCREEN_WIDTH * scale).round() as u32;
+        let scaled_h = (SCREEN_HEIGHT * scale).round() as u32;
+        miniquad::window::set_window_size(scaled_w, scaled_h);
+    }
 
     let l1: f64 = 1.5;
     let l2: f64 = 1.5;
@@ -90,29 +68,22 @@ fn main() -> Result<(), String> {
     let m1: f64 = 1.0;
     let m2: f64 = 1.0;
 
-    let mut theta1: f64 = 1.4;
-    let mut theta2: f64 = 1.4;
+    let mut theta1: f64 = 1.0;
+    let mut theta2: f64 = 0.5;
 
-    let mut omega1: f64 = 0.0;
-    let mut omega2: f64 = 0.0;
+    let mut omega1: f64 = 4.0;
+    let mut omega2: f64 = -2.0;
 
-    'running: loop {
-        for event in events.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    break 'running;
-                }
-                _ => {}
-            }
+    let bg_color = Color::from_rgba(18, 20, 28, 255);
+    let rod_color = Color::from_rgba(75, 155, 255, 255);
+    let bob_color = Color::from_rgba(255, 75, 85, 255);
+
+    loop {
+        if is_key_pressed(KeyCode::Escape) {
+            break;
         }
 
-        let now = Instant::now();
-        let dt = now.duration_since(last_frame).as_secs_f64();
-        last_frame = now;
+        let dt = get_frame_time() as f64;
 
         double_pendulum::step(
             l1,
@@ -126,7 +97,7 @@ fn main() -> Result<(), String> {
             dt,
         );
 
-        let x0 = (SCREEN_WIDTH / 2) as f64;
+        let x0 = (SCREEN_WIDTH / 2.0) as f64;
         let y0 = 100.0;
 
         let x1 = x0 + l1 * theta1.sin() * 100.0;
@@ -135,21 +106,27 @@ fn main() -> Result<(), String> {
         let x2 = x1 + l2 * theta2.sin() * 100.0;
         let y2 = y1 + l2 * theta2.cos() * 100.0;
 
-        canvas.set_draw_color(Color::RGB(20, 20, 30));
-        canvas.clear();
+        clear_background(bg_color);
+        draw_cartesian_plane();
 
-        canvas.set_draw_color(Color::RGB(180, 180, 190));
+        let radius = 8.0;
 
-        canvas.draw_line((x0 as i32, y0 as i32), (x1 as i32, y1 as i32))?;
+        draw_line(
+            x0 as f32, y0 as f32,
+            x1 as f32, y1 as f32,
+            2.5, rod_color,
+        );
 
-        canvas.draw_line((x1 as i32, y1 as i32), (x2 as i32, y2 as i32))?;
+        draw_line(
+            x1 as f32, y1 as f32,
+            x2 as f32, y2 as f32,
+            2.5, rod_color,
+        );
 
-        draw_circle(&mut canvas, x0 as i32, y0 as i32, 6)?;
-        draw_circle(&mut canvas, x1 as i32, y1 as i32, 12)?;
-        draw_circle(&mut canvas, x2 as i32, y2 as i32, 12)?;
+        draw_circle(x0 as f32, y0 as f32, radius, bob_color);
+        draw_circle(x1 as f32, y1 as f32, radius, bob_color);
+        draw_circle(x2 as f32, y2 as f32, radius, bob_color);
 
-        canvas.present();
+        next_frame().await;
     }
-
-    Ok(())
 }
