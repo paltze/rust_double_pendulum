@@ -1,6 +1,15 @@
 # Double Pendulum Simulator
 
-Written in Rust with Macroquad
+Written in Rust with Macroquad. [Quick web demo](https://paltze.github.io/rust_double_pendulum/).
+
+## Compiling and Running
+
+Clone the repo, or get the source in any other way. Then:
+
+```
+cargo run
+cargo run --release # Release build
+```
 
 ## Technical details
 
